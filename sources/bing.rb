@@ -1,7 +1,10 @@
 require 'json'
-require 'open-uri'
+require 'curb'
+require 'base64'
+require 'cgi'
 require './sources/image_iterator'
 require './sources/spice'
+
 
 class Bing
   attr_reader :noun, :images, :result, :json
@@ -22,8 +25,7 @@ class Bing
   end
 
   def search!
-    @url    = Bing.search_url(@noun)
-    @result = Bing.open_json(@url)
+    @result = Bing.query(@noun)
     @json   = Bing.process_json(@result)
 
     @images = @json[:images]
@@ -32,30 +34,32 @@ class Bing
   end
 
   def self.process_json(json)
-    result = json["SearchResponse"]
-    images = result["Image"]
+    data = json.fetch("d")
+    results = data.fetch("results")
 
     {
-      total:  images['Total'],
-      images: images['Results'].map { |image| image['MediaUrl'] }
+      total:  results.count,
+      images: results.map { |image| image['MediaUrl'] }
     }
   end
 
-  def self.search_url(noun)
-    query = CGI.escape(Spice.up(noun))
-    ENV['bing'] = '0DA7AB4A8F9C686A25B23945975F9CCF4E8D3592'
-    filter = if (rand(10)+1)%2 == 0
-      "&Image.Filters=Face:Portrait"
-    else
-      ""
+  def self.query(noun)
+    authKey = Base64.strict_encode64("#{key}:#{key}")
+    options = {
+      :$format => "json",
+      :Query => "'#{noun}'"
+    }
+
+    result = Curl.get("https://api.datamarket.azure.com/Bing/Search/Image", options) do |http|
+      http.headers['Authorization'] = "Basic #{authKey}"
     end
-    "http://api.bing.net/json.aspx?AppId=#{ENV['bing']}&Query=#{query}&Sources=Image&Version=2.0&Market=en-us&Adult=On&Image.Count=10&Image.Offset=0#{filter}"
+
+    JSON.parse(result.body_str)
   end
 
-  def self.open_json(url)
-    Kernel.open(url) do |fh|
-      return JSON.parse(fh.read)
-    end
+  def self.key
+    ENV['BING_KEY']
   end
-
 end
+
+fail 'BING_KEY is missing' unless Bing.key

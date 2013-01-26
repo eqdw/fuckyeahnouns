@@ -1,5 +1,6 @@
 source :gemcutter
 
+gem 'curb'
 gem 'sequel'
 gem 'rest-client'
 gem 'newrelic_rpm'

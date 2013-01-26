@@ -3,21 +3,24 @@ require './sources/bing.rb'
 describe 'Bing' do
 
   describe '.process_json' do
-    subject { Bing.process_json(Bing.open_json('./spec/support/bing.json')) }
+    subject do
+      open('./spec/support/bing.json') do |json|
+        Bing.process_json(JSON.parse(json.read))
+      end
+    end
 
-    its([:total])  { should equal 5660 }
+    its([:total])  { should equal 50 }
     its([:images]) { should respond_to :each }
   end
 
   describe '.fetch' do
     before do
-      Bing.stub(:open_json) do
+      Bing.stub(:query) do
         {
-          "SearchResponse" => {
-            "Image" => {
-              "Total" => 1,
-              "Results" => [{ 'MediaUrl' => 'http://example.com/example.jpg'}]
-            }
+          "d" => {
+            "results" => [
+              { 'MediaUrl' => 'http://example.com/example.jpg'}
+            ]
           }
         }
       end
@@ -30,10 +33,5 @@ describe 'Bing' do
     let(:subject)     { Bing.fetch('xbox') }
     its(:images)      { should respond_to(:each) }
     its(:images)      { should == ['http://example.com/example.jpg'] }
-  end
-
-  describe 'search_url' do
-    subject { Bing.search_url('xbox') }
-    it { should match(/http:\/\//) }
   end
 end

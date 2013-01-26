@@ -8,6 +8,10 @@ describe FuckYeahNouns::Application do
     last_response.headers['Cache-Control'].should =~ /public, must-revalidate, max-age=\d+/
   end
 
+  def should_be_image
+    last_response.headers['content-type'].should == 'image/jpeg'
+  end
+
   def app
     @app ||= subject
   end
@@ -46,7 +50,7 @@ describe FuckYeahNouns::Application do
     before(:each) do
       Actions::Image.stub(:annotate) { test_image }
       Actions::Image.stub(:fetch)    { test_iterator }
-      get '/images/sleepy'
+      get '/images/sleepy.jpg'
     end
 
     it 'loads' do
@@ -54,7 +58,7 @@ describe FuckYeahNouns::Application do
     end
 
     it 'is content-type of jpg' do
-      last_response.headers['content-type'].should == 'image/jpeg'
+      should_be_image
     end
 
     it 'is cached' do
